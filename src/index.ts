@@ -15,7 +15,8 @@ async function main() {
     log("error", "No Ollama instances found.");
     process.exit(1);
   }
-  log("success", `Found ${hosts.length} Ollama instance(s): ${hosts.join(", ")}`);
+  const hostnames = hosts.map((h) => h.hostname);
+  log("success", `Found ${hosts.length} Ollama instance(s): ${hostnames.join(", ")}`);
 
   log("phase", "Phase 2: Enumerating models...");
   const models = await enumerate(hosts);

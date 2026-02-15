@@ -16,16 +16,27 @@ export async function discover(): Promise<OllamaHost[]> {
 
   // Get local subnets
   const subnets = getLocalSubnets();
+  const BATCH_SIZE = 50;
   for (const subnet of subnets) {
     log("info", `Scanning subnet ${subnet.base}.0/24...`);
+    const ips: string[] = [];
     for (let i = 1; i < 255; i++) {
       const ip = `${subnet.base}.${i}`;
-      if (ip === subnet.localIp) continue; // skip self
-      progressLine(`Probing ${ip}...`);
-      if (await probeOllama(ip)) {
-        clearProgress();
-        hosts.push({ address: `${ip}:${OLLAMA_PORT}`, hostname: ip });
-        log("info", `${ip}: Ollama found`);
+      if (ip !== subnet.localIp) ips.push(ip);
+    }
+
+    for (let b = 0; b < ips.length; b += BATCH_SIZE) {
+      const batch = ips.slice(b, b + BATCH_SIZE);
+      progressLine(`Probing ${batch[0]}..${batch[batch.length - 1]}`);
+      const results = await Promise.all(
+        batch.map(async (ip) => ({ ip, ok: await probeOllama(ip) }))
+      );
+      for (const { ip, ok } of results) {
+        if (ok) {
+          clearProgress();
+          hosts.push({ address: `${ip}:${OLLAMA_PORT}`, hostname: ip });
+          log("info", `${ip}: Ollama found`);
+        }
       }
     }
     clearProgress();

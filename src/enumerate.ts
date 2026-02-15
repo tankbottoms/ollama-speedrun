@@ -7,7 +7,10 @@ export async function enumerate(hosts: OllamaHost[]): Promise<ModelInfo[]> {
   for (const host of hosts) {
     try {
       // List models
-      const tagsRes = await fetch(`http://${host.address}/api/tags`);
+      const tagsController = new AbortController();
+      const tagsTimeout = setTimeout(() => tagsController.abort(), 10000);
+      const tagsRes = await fetch(`http://${host.address}/api/tags`, { signal: tagsController.signal });
+      clearTimeout(tagsTimeout);
       const tagsData = (await tagsRes.json()) as {
         models: Array<{
           name: string;
@@ -24,11 +27,15 @@ export async function enumerate(hosts: OllamaHost[]): Promise<ModelInfo[]> {
         // Get detailed info
         let capabilities: string[] = [];
         try {
+          const showController = new AbortController();
+          const showTimeout = setTimeout(() => showController.abort(), 10000);
           const showRes = await fetch(`http://${host.address}/api/show`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ model: m.name }),
+            signal: showController.signal,
           });
+          clearTimeout(showTimeout);
           const showData = (await showRes.json()) as {
             capabilities?: string[];
           };

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+ollama-speedrun
+ollama-speedrun-linux
+ollama-speedrun-macos
+.claude/
+.github-commit-messages

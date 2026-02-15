@@ -4,25 +4,41 @@ import { log, progressLine, clearProgress } from "./ui";
 
 const OLLAMA_PORT = 11434;
 const CONNECT_TIMEOUT_MS = 500;
+const LOCALHOST_TIMEOUT_MS = 5000;
+const LOCALHOST_RETRIES = 3;
 
 export async function discover(): Promise<OllamaHost[]> {
   const hosts: OllamaHost[] = [];
 
-  // Check localhost first
-  if (await probeOllama("127.0.0.1")) {
+  // Check localhost first with generous timeout and retries
+  log("info", "Checking localhost...");
+  let localhostFound = false;
+  for (let attempt = 1; attempt <= LOCALHOST_RETRIES; attempt++) {
+    if (await probeOllama("127.0.0.1", LOCALHOST_TIMEOUT_MS)) {
+      localhostFound = true;
+      break;
+    }
+    if (attempt < LOCALHOST_RETRIES) {
+      log("info", `localhost: retry ${attempt + 1}/${LOCALHOST_RETRIES}...`);
+    }
+  }
+  if (localhostFound) {
     hosts.push({ address: `127.0.0.1:${OLLAMA_PORT}`, hostname: "localhost" });
-    log("info", "localhost: Ollama found");
+    log("success", "localhost: Ollama found");
+  } else {
+    log("info", "localhost: no Ollama instance detected");
   }
 
-  // Get local subnets
+  // Get local subnets -- skip local IPs to avoid discovering self twice
   const subnets = getLocalSubnets();
+  const localIps = new Set(subnets.map((s) => s.localIp));
   const BATCH_SIZE = 50;
   for (const subnet of subnets) {
     log("info", `Scanning subnet ${subnet.base}.0/24...`);
     const ips: string[] = [];
     for (let i = 1; i < 255; i++) {
       const ip = `${subnet.base}.${i}`;
-      if (ip !== subnet.localIp) ips.push(ip);
+      if (!localIps.has(ip)) ips.push(ip);
     }
 
     for (let b = 0; b < ips.length; b += BATCH_SIZE) {
@@ -45,10 +61,10 @@ export async function discover(): Promise<OllamaHost[]> {
   return hosts;
 }
 
-async function probeOllama(ip: string): Promise<boolean> {
+async function probeOllama(ip: string, timeoutMs = CONNECT_TIMEOUT_MS): Promise<boolean> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), CONNECT_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     const res = await fetch(`http://${ip}:${OLLAMA_PORT}/api/tags`, {
       signal: controller.signal,
     });

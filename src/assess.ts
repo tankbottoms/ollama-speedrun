@@ -1,4 +1,5 @@
 import type { BenchmarkResult, ScoredResult, MemoryTier } from "./types";
+import { config } from "./config";
 import { renderTieredResults, log } from "./ui";
 
 export function assess(results: BenchmarkResult[]) {
@@ -29,8 +30,8 @@ function scoreResult(result: BenchmarkResult, allResults: BenchmarkResult[]): Sc
   const maxTokens = Math.max(...allResults.map((r) => r.totalTokens));
   const qualityScore = maxTokens > 0 ? (result.totalTokens / maxTokens) * 100 : 0;
 
-  // Composite: 60% speed, 40% quality
-  const compositeScore = speedScore * 0.6 + qualityScore * 0.4;
+  // Composite: weighted speed + quality
+  const compositeScore = speedScore * config.speedWeight + qualityScore * config.qualityWeight;
 
   return {
     result,

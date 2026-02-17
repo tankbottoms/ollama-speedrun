@@ -1,11 +1,7 @@
 import { networkInterfaces } from "os";
 import type { OllamaHost } from "./types";
+import { config } from "./config";
 import { log, progressLine, clearProgress } from "./ui";
-
-const OLLAMA_PORT = 11434;
-const CONNECT_TIMEOUT_MS = 500;
-const LOCALHOST_TIMEOUT_MS = 5000;
-const LOCALHOST_RETRIES = 3;
 
 export async function discover(): Promise<OllamaHost[]> {
   const hosts: OllamaHost[] = [];
@@ -13,17 +9,17 @@ export async function discover(): Promise<OllamaHost[]> {
   // Check localhost first with generous timeout and retries
   log("info", "Checking localhost...");
   let localhostFound = false;
-  for (let attempt = 1; attempt <= LOCALHOST_RETRIES; attempt++) {
-    if (await probeOllama("127.0.0.1", LOCALHOST_TIMEOUT_MS)) {
+  for (let attempt = 1; attempt <= config.localhostRetries; attempt++) {
+    if (await probeOllama("127.0.0.1", config.localhostTimeoutMs)) {
       localhostFound = true;
       break;
     }
-    if (attempt < LOCALHOST_RETRIES) {
-      log("info", `localhost: retry ${attempt + 1}/${LOCALHOST_RETRIES}...`);
+    if (attempt < config.localhostRetries) {
+      log("info", `localhost: retry ${attempt + 1}/${config.localhostRetries}...`);
     }
   }
   if (localhostFound) {
-    hosts.push({ address: `127.0.0.1:${OLLAMA_PORT}`, hostname: "localhost" });
+    hosts.push({ address: `127.0.0.1:${config.ollamaPort}`, hostname: "localhost" });
     log("success", "localhost: Ollama found");
   } else {
     log("info", "localhost: no Ollama instance detected");
@@ -32,7 +28,6 @@ export async function discover(): Promise<OllamaHost[]> {
   // Get local subnets -- skip local IPs to avoid discovering self twice
   const subnets = getLocalSubnets();
   const localIps = new Set(subnets.map((s) => s.localIp));
-  const BATCH_SIZE = 50;
   for (const subnet of subnets) {
     log("info", `Scanning subnet ${subnet.base}.0/24...`);
     const ips: string[] = [];
@@ -41,8 +36,8 @@ export async function discover(): Promise<OllamaHost[]> {
       if (!localIps.has(ip)) ips.push(ip);
     }
 
-    for (let b = 0; b < ips.length; b += BATCH_SIZE) {
-      const batch = ips.slice(b, b + BATCH_SIZE);
+    for (let b = 0; b < ips.length; b += config.subnetBatchSize) {
+      const batch = ips.slice(b, b + config.subnetBatchSize);
       progressLine(`Probing ${batch[0]}..${batch[batch.length - 1]}`);
       const results = await Promise.all(
         batch.map(async (ip) => ({ ip, ok: await probeOllama(ip) }))
@@ -50,7 +45,7 @@ export async function discover(): Promise<OllamaHost[]> {
       for (const { ip, ok } of results) {
         if (ok) {
           clearProgress();
-          hosts.push({ address: `${ip}:${OLLAMA_PORT}`, hostname: ip });
+          hosts.push({ address: `${ip}:${config.ollamaPort}`, hostname: ip });
           log("info", `${ip}: Ollama found`);
         }
       }
@@ -61,11 +56,11 @@ export async function discover(): Promise<OllamaHost[]> {
   return hosts;
 }
 
-async function probeOllama(ip: string, timeoutMs = CONNECT_TIMEOUT_MS): Promise<boolean> {
+async function probeOllama(ip: string, timeoutMs = config.connectTimeoutMs): Promise<boolean> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
-    const res = await fetch(`http://${ip}:${OLLAMA_PORT}/api/tags`, {
+    const res = await fetch(`http://${ip}:${config.ollamaPort}/api/tags`, {
       signal: controller.signal,
     });
     clearTimeout(timeout);

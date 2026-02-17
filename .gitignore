@@ -1,7 +1,18 @@
 node_modules/
 dist/
+
+# Compiled binaries
 ollama-speedrun
 ollama-speedrun-linux
 ollama-speedrun-macos
+
+# Environment
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code
 .claude/
 .github-commit-messages

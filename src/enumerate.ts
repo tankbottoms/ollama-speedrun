@@ -1,4 +1,5 @@
 import type { OllamaHost, ModelInfo } from "./types";
+import { config } from "./config";
 import { log } from "./ui";
 
 export async function enumerate(hosts: OllamaHost[]): Promise<ModelInfo[]> {
@@ -8,7 +9,7 @@ export async function enumerate(hosts: OllamaHost[]): Promise<ModelInfo[]> {
     try {
       // List models
       const tagsController = new AbortController();
-      const tagsTimeout = setTimeout(() => tagsController.abort(), 10000);
+      const tagsTimeout = setTimeout(() => tagsController.abort(), config.enumTimeoutMs);
       const tagsRes = await fetch(`http://${host.address}/api/tags`, { signal: tagsController.signal });
       clearTimeout(tagsTimeout);
       const tagsData = (await tagsRes.json()) as {
@@ -24,11 +25,11 @@ export async function enumerate(hosts: OllamaHost[]): Promise<ModelInfo[]> {
       };
 
       for (const m of tagsData.models) {
-        // Get detailed info
+        // Validate model is actually available via /api/show
         let capabilities: string[] = [];
         try {
           const showController = new AbortController();
-          const showTimeout = setTimeout(() => showController.abort(), 10000);
+          const showTimeout = setTimeout(() => showController.abort(), config.enumTimeoutMs);
           const showRes = await fetch(`http://${host.address}/api/show`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -36,12 +37,19 @@ export async function enumerate(hosts: OllamaHost[]): Promise<ModelInfo[]> {
             signal: showController.signal,
           });
           clearTimeout(showTimeout);
+
+          if (!showRes.ok) {
+            log("info", `  ${m.name} on ${host.hostname}: skipped (model not available, HTTP ${showRes.status})`);
+            continue;
+          }
+
           const showData = (await showRes.json()) as {
             capabilities?: string[];
           };
           capabilities = showData.capabilities ?? [];
         } catch {
-          // show endpoint may fail for some models, that's ok
+          log("info", `  ${m.name} on ${host.hostname}: skipped (model unreachable or removed)`);
+          continue;
         }
 
         models.push({

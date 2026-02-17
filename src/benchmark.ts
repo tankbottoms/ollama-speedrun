@@ -57,7 +57,8 @@ async function benchmarkModel(model: ModelInfo): Promise<BenchmarkResult> {
   });
 
   if (!res.ok || !res.body) {
-    throw new Error(`HTTP ${res.status}`);
+    const body = res.body ? await res.text().catch(() => "") : "";
+    throw new Error(`HTTP ${res.status}${body.includes("not found") ? " (model removed or not pulled)" : ""}`);
   }
 
   const reader = res.body.getReader();

@@ -6,6 +6,8 @@ Zero dependencies. Single binary. Under 500 lines.
 
 ## What It Does
 
+Run on an Nvidia DGX Spark with 5 models across 2 hosts (localhost + Docker container):
+
 ```
   OLLAMA SPEEDRUN
   Discover, benchmark, and choose your best local LLM
@@ -14,38 +16,63 @@ Zero dependencies. Single binary. Under 500 lines.
  [..] Checking localhost...
  [OK]  localhost: Ollama found
  [..] Scanning subnet 192.168.1.0/24...
- [..] 192.168.1.76: Ollama found
- [OK]  Found 2 Ollama instance(s): localhost, 192.168.1.76
+ [..] Scanning subnet 172.20.0.0/24...
+ [..] 172.20.0.7: Ollama found
+ [OK]  Found 2 Ollama instance(s): localhost, 172.20.0.7
 
  >>  Phase 2: Enumerating models...
- [..]   mistral:7b-instruct-q4_K_M (7B, Q4_K_M) on localhost
- [..]   llama3.2:latest (3.2B, Q4_K_M) on localhost
- [..]   llama2-uncensored:70b on localhost: skipped (model unreachable or removed)
- [..]   llava-llama3:latest (8B, Q4_K_M) on 192.168.1.76
- [..]   mistral-small3.1:latest (24.0B, Q4_K_M) on 192.168.1.76
- [..]   deepseek-r1:latest (8.2B, Q4_K_M) on 192.168.1.76
- [..]   llama3.1:8b (8.0B, Q4_K_M) on 192.168.1.76
- [OK]  Found 7 model(s) across all instances
+ [..]   llava-llama3:latest (8B, Q4_K_M) on localhost
+ [..]   mistral-small3.1:latest (24.0B, Q4_K_M) on localhost
+ [..]   deepseek-r1:latest (8.2B, Q4_K_M) on localhost
+ [..]   glm-4.7-flash:latest (29.9B, Q4_K_M) on localhost
+ [..]   llama3.1:8b (8.0B, Q4_K_M) on localhost
+ [..]   llava-llama3:latest (8B, Q4_K_M) on 172.20.0.7
+ [..]   mistral-small3.1:latest (24.0B, Q4_K_M) on 172.20.0.7
+ [..]   deepseek-r1:latest (8.2B, Q4_K_M) on 172.20.0.7
+ [..]   glm-4.7-flash:latest (29.9B, Q4_K_M) on 172.20.0.7
+ [..]   llama3.1:8b (8.0B, Q4_K_M) on 172.20.0.7
+ [OK]  Found 10 model(s) across all instances
 
  >>  Phase 3: Benchmarking models...
- [OK]  llava-llama3:latest: 43.1 tok/s, TTFT 4072ms, 530 tokens in 16.4s
- [OK]  mistral-small3.1:latest: 13.9 tok/s, TTFT 5273ms, 1406 tokens in 106.3s
+ [OK]  llava-llama3:latest: 40.7 tok/s, TTFT 3718ms, 403 tokens in 13.6s
+ [OK]  mistral-small3.1:latest: 14.3 tok/s, TTFT 5123ms, 1218 tokens in 90.4s
+ [OK]  deepseek-r1:latest: 43.0 tok/s, TTFT 19469ms, 3384 tokens in 98.1s
+ [OK]  glm-4.7-flash:latest: 86.4 tok/s, TTFT 25339ms, 2157 tokens in 50.3s
+ [OK]  llama3.1:8b: 39.4 tok/s, TTFT 6361ms, 1224 tokens in 37.4s
+ [OK]  llava-llama3:latest: 40.2 tok/s, TTFT 185ms, 383 tokens in 9.7s
+ [OK]  mistral-small3.1:latest: 13.4 tok/s, TTFT 4762ms, 1223 tokens in 96.3s
+ [OK]  deepseek-r1:latest: 40.6 tok/s, TTFT 8239ms, 3409 tokens in 92.1s
+ [OK]  glm-4.7-flash:latest: 101.2 tok/s, TTFT 31513ms, 2686 tokens in 58.0s
+ [OK]  llama3.1:8b: 39.3 tok/s, TTFT 4785ms, 1128 tokens in 33.5s
 
  >>  Phase 4: Assessment...
 
   Medium (4-8GB)
-  ────────────────────────────────────────────────────────────────────────────────
+  ──────────────────────────────────────────────────────────────────────────────────
   Model                       Host              Size      Params    Tok/s     TTFT      Score
-  ────────────────────────────────────────────────────────────────────────────────
-* llava-llama3:latest         192.168.1.76      5.2 GB    8B        43.1      4072ms    75
+  ──────────────────────────────────────────────────────────────────────────────────
+* deepseek-r1:latest          localhost         4.9 GB    8.2B      43.0      19469ms   65
+  deepseek-r1:latest          172.20.0.7        4.9 GB    8.2B      40.6      8239ms    64
+  llama3.1:8b                 localhost         4.6 GB    8.0B      39.4      6361ms    38
+  llama3.1:8b                 172.20.0.7        4.6 GB    8.0B      39.3      4785ms    37
+  llava-llama3:latest         localhost         5.2 GB    8B        40.7      3718ms    29
+  llava-llama3:latest         172.20.0.7        5.2 GB    8B        40.2      185ms     28
 
   Large (8-16GB)
-  ────────────────────────────────────────────────────────────────────────────────
+  ──────────────────────────────────────────────────────────────────────────────────
   Model                       Host              Size      Params    Tok/s     TTFT      Score
-  ────────────────────────────────────────────────────────────────────────────────
-* mistral-small3.1:latest     192.168.1.76      14.4 GB   24.0B     13.9      5273ms    59
+  ──────────────────────────────────────────────────────────────────────────────────
+* mistral-small3.1:latest     localhost         14.4 GB   24.0B     14.3      5123ms    23
+  mistral-small3.1:latest     172.20.0.7        14.4 GB   24.0B     13.4      4762ms    22
 
- >>  Top recommendation: llava-llama3:latest on 192.168.1.76 (score: 75, Medium (4-8GB))
+  XL (16GB+)
+  ──────────────────────────────────────────────────────────────────────────────────
+  Model                       Host              Size      Params    Tok/s     TTFT      Score
+  ──────────────────────────────────────────────────────────────────────────────────
+* glm-4.7-flash:latest        172.20.0.7        17.7 GB   29.9B     101.2     31513ms   92
+  glm-4.7-flash:latest        localhost         17.7 GB   29.9B     86.4      25339ms   77
+
+ >>  Top recommendation: glm-4.7-flash:latest on 172.20.0.7 (score: 92, XL (16GB+))
 ```
 
 ## Quick Start
